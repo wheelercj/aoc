@@ -14,7 +14,8 @@ type Coord struct {
 
 func main() {
 	input := parseInput("input.txt")
-	part1(input) // < 632038
+	part1(input)
+	part2(input)
 }
 
 func parseInput(fileName string) [][]string {
@@ -48,6 +49,22 @@ func part1(input [][]string) {
 				for _, num := range nums {
 					sum += num
 				}
+			}
+		}
+	}
+	fmt.Println("sum:", sum)
+}
+
+func part2(input [][]string) {
+	var sum int
+	for i, line := range input {
+		for j, ch := range line {
+			if ch == "*" {
+				nums := getAdjacentNums(j, i, input)
+				if len(nums) != 2 {
+					continue
+				}
+				sum += nums[0] * nums[1]
 			}
 		}
 	}
@@ -157,8 +174,4 @@ func getNum(x, y int, input [][]string) (int, Coord) {
 	}
 
 	return int(num), Coord{start, y}
-}
-
-func part2() {
-
 }
