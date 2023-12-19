@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Map struct {
@@ -101,6 +102,7 @@ func part1(seeds []int, allMaps [][]Map) {
 }
 
 func part2(seedRanges []int, allMaps [][]Map) {
+	start := time.Now()
 	lowestLocationNum := getLowestLocationNum(seedRanges[0], seedRanges[1], allMaps)
 	for i := 2; i < len(seedRanges); i += 2 {
 		locationNum := getLowestLocationNum(seedRanges[i], seedRanges[i+1], allMaps)
@@ -109,7 +111,9 @@ func part2(seedRanges []int, allMaps [][]Map) {
 		}
 	}
 
-	fmt.Println("lowest location number:", lowestLocationNum)
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Printf("lowest location number: %d, (took %v)", lowestLocationNum, elapsed)
 }
 
 func getLowestLocationNum(seedRangeStart, rangeLength int, allMaps [][]Map) int {
