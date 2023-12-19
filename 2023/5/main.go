@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Map struct {
@@ -60,7 +61,7 @@ func getCategoryMap(categoryStr string) []Map {
 	return categoryMap
 }
 
-func getLocation(id int, allMaps [][]Map) int {
+func getLoc(id int, allMaps [][]Map) int {
 	for i := range allMaps {
 		id = getCategoryValue(id, allMaps[i])
 	}
@@ -89,36 +90,45 @@ func mustParseInt(numStr string) int {
 }
 
 func part1(seeds []int, allMaps [][]Map) {
-	lowestLocationNum := getLocation(seeds[0], allMaps)
+	lowestLocNum := getLoc(seeds[0], allMaps)
 	for i := 1; i < len(seeds); i++ {
-		locationNum := getLocation(seeds[i], allMaps)
-		if locationNum < lowestLocationNum {
-			lowestLocationNum = locationNum
+		locNum := getLoc(seeds[i], allMaps)
+		if locNum < lowestLocNum {
+			lowestLocNum = locNum
 		}
 	}
 
-	fmt.Println("lowest location number:", lowestLocationNum)
+	fmt.Println("part 1 result:", lowestLocNum)
 }
 
 func part2(seedRanges []int, allMaps [][]Map) {
-	lowestLocationNum := getLowestLocationNum(seedRanges[0], seedRanges[1], allMaps)
-	for i := 2; i < len(seedRanges); i += 2 {
-		locationNum := getLowestLocationNum(seedRanges[i], seedRanges[i+1], allMaps)
-		if locationNum < lowestLocationNum {
-			lowestLocationNum = locationNum
+	start := time.Now()
+
+	locsCh := make(chan int, len(seedRanges)/2)
+	for i := 0; i < len(seedRanges); i += 2 {
+		go getLowestLocNum(seedRanges[i], seedRanges[i+1], allMaps, locsCh)
+	}
+
+	lowestLocNum := <-locsCh
+	for i := 0; i < len(seedRanges)/2-1; i++ {
+		locNum := <-locsCh
+		if locNum < lowestLocNum {
+			lowestLocNum = locNum
 		}
 	}
 
-	fmt.Println("lowest location number:", lowestLocationNum)
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Printf("part 2 result: %d (took %v)", lowestLocNum, elapsed)
 }
 
-func getLowestLocationNum(seedRangeStart, rangeLength int, allMaps [][]Map) int {
-	lowestLocationNum := getLocation(seedRangeStart, allMaps)
+func getLowestLocNum(seedRangeStart, rangeLength int, allMaps [][]Map, locsCh chan int) {
+	lowestLocNum := getLoc(seedRangeStart, allMaps)
 	for seed := seedRangeStart; seed < seedRangeStart+rangeLength; seed++ {
-		locationNum := getLocation(seed, allMaps)
-		if locationNum < lowestLocationNum {
-			lowestLocationNum = locationNum
+		locNum := getLoc(seed, allMaps)
+		if locNum < lowestLocNum {
+			lowestLocNum = locNum
 		}
 	}
-	return lowestLocationNum
+	locsCh <- lowestLocNum
 }
