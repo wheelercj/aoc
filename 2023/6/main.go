@@ -17,31 +17,23 @@ type Race struct {
 }
 
 func main() {
-	races := parseInput("input.txt")
-	// fmt.Println("races:", races)
-	part1(races)
+	times, distances := parseInput("input.txt")
+	part1(times, distances)
+	part2(times, distances)
 }
 
-func parseInput(fileName string) []Race {
+func parseInput(fileName string) (string, string) {
 	bytes, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}
 	lines := strings.Split(string(bytes), "\r\n")
 	timesStr, distancesStr := lines[0], lines[1]
-	times, distances := getInts(timesStr), getInts(distancesStr)
-
-	var races []Race
-	for i := 0; i < len(times); i++ {
-		races = append(
-			races,
-			Race{timeLimit: ms(times[i]), recordDist: mm(distances[i])},
-		)
-	}
-
-	return races
+	return timesStr, distancesStr
 }
 
+// getInts gets a list of whitespace-separated integers from a string. The character(s)
+// before the first whitespace are ignored.
 func getInts(numsStr string) []int {
 	var nums []int
 	numsStrs := strings.Fields(numsStr)
@@ -59,7 +51,16 @@ func mustParseInt(numStr string) int {
 	return int(num)
 }
 
-func part1(races []Race) {
+func part1(timesStr, distancesStr string) {
+	times, distances := getInts(timesStr), getInts(distancesStr)
+	var races []Race
+	for i := 0; i < len(times); i++ {
+		races = append(
+			races,
+			Race{timeLimit: ms(times[i]), recordDist: mm(distances[i])},
+		)
+	}
+
 	for i, race := range races {
 		fmt.Printf("race %d\n", i+1)
 		races[i].winWayCount = getWinWayCount(race)
@@ -70,7 +71,7 @@ func part1(races []Race) {
 		product *= race.winWayCount
 	}
 
-	fmt.Println("product of win way counts:", product)
+	fmt.Println("\npart 1 result:", product)
 }
 
 func getWinWayCount(race Race) int {
@@ -132,4 +133,18 @@ func findMaxChargeTimeNeeded(race Race) (ms, error) {
 // milliseconds long.
 func getDist(timeCharged, timeLimit ms) mm {
 	return mm(timeCharged * (timeLimit - timeCharged))
+}
+
+func part2(timeStr, distanceStr string) {
+	timeStr = strings.ReplaceAll(timeStr, " ", "")
+	distanceStr = strings.ReplaceAll(distanceStr, " ", "")
+	timeStr = strings.TrimPrefix(timeStr, "Time:")
+	distanceStr = strings.TrimPrefix(distanceStr, "Distance:")
+
+	timeLimit := ms(mustParseInt(timeStr))
+	recordDist := mm(mustParseInt(distanceStr))
+	race := Race{timeLimit: timeLimit, recordDist: recordDist}
+	winWayCount := getWinWayCount(race)
+
+	fmt.Println("part 2 result:", winWayCount)
 }
