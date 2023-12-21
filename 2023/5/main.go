@@ -5,12 +5,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Map struct {
 	destStart int
+	destEnd   int
 	srcStart  int
+	srcEnd    int
 	length    int
 }
 
@@ -25,60 +26,63 @@ func parseInput(fileName string) ([]int, [][]Map) {
 	if err != nil {
 		panic(err)
 	}
-	seedsAndCategoryStrs := strings.Split(string(bytes), "\r\n\r\n")
-	categoryCount := len(seedsAndCategoryStrs) - 1
+	seedsAndCatStrs := strings.Split(string(bytes), "\r\n\r\n")
+	catCount := len(seedsAndCatStrs) - 1
 
-	seedsStr := seedsAndCategoryStrs[0]
+	seedsStr := seedsAndCatStrs[0]
 	seedsStrs := strings.Split(seedsStr, " ")
 	seeds := make([]int, len(seedsStrs)-1)
 	for i := 0; i < len(seeds); i++ {
 		seeds[i] = mustParseInt(seedsStrs[i+1])
 	}
 
-	allMaps := make([][]Map, categoryCount)
+	allMaps := make([][]Map, catCount)
 	for i := range allMaps {
-		allMaps[i] = getCategoryMap(seedsAndCategoryStrs[i+1])
+		allMaps[i] = getCatMaps(seedsAndCatStrs[i+1])
 	}
 
 	return seeds, allMaps
 }
 
-func getCategoryMap(categoryStr string) []Map {
-	categoryParts := strings.Split(strings.Trim(categoryStr, "\r\n"), ":\r\n")
-	lines := strings.Split(categoryParts[1], "\r\n")
-	categoryMap := make([]Map, len(lines))
+func getCatMaps(catStr string) []Map {
+	catParts := strings.Split(strings.Trim(catStr, "\r\n"), ":\r\n")
+	lines := strings.Split(catParts[1], "\r\n")
+	catMaps := make([]Map, len(lines))
 	for i, line := range lines {
 		numStrs := strings.Split(line, " ")
 		destStart := mustParseInt(numStrs[0])
 		srcStart := mustParseInt(numStrs[1])
 		length := mustParseInt(numStrs[2])
-		categoryMap[i] = Map{
+		catMaps[i] = Map{
 			destStart: destStart,
+			destEnd:   destStart + length - 1,
 			srcStart:  srcStart,
+			srcEnd:    srcStart + length - 1,
 			length:    length,
 		}
 	}
-	return categoryMap
+	return catMaps
 }
 
-func getLoc(id int, allMaps [][]Map) int {
+func getLoc(seedId int, allMaps [][]Map) int {
+	id := seedId
 	for i := range allMaps {
-		id = getCategoryValue(id, allMaps[i])
+		id = getCatValue(id, allMaps[i])
 	}
 	return id
 }
 
-func getCategoryValue(id int, categoryMaps []Map) int {
-	for _, categoryMap := range categoryMaps {
-		destStart := categoryMap.destStart
-		srcStart := categoryMap.srcStart
-		length := categoryMap.length
-		if id >= srcStart && id < srcStart+length {
+func getCatValue(catKey int, catMaps []Map) int {
+	for _, catMap := range catMaps {
+		destStart := catMap.destStart
+		srcStart := catMap.srcStart
+		length := catMap.length
+		if catKey >= srcStart && catKey < srcStart+length {
 			diff := destStart - srcStart
-			return id + diff
+			return catKey + diff
 		}
 	}
-	return id
+	return catKey
 }
 
 func mustParseInt(numStr string) int {
@@ -102,33 +106,70 @@ func part1(seeds []int, allMaps [][]Map) {
 }
 
 func part2(seedRanges []int, allMaps [][]Map) {
-	start := time.Now()
+	lowestLocNum := -1
+	startCats := make([]int, len(seedRanges)/2)
 
-	locsCh := make(chan int, len(seedRanges)/2)
-	for i := 0; i < len(seedRanges); i += 2 {
-		go getLowestLocNum(seedRanges[i], seedRanges[i+1], allMaps, locsCh)
-	}
+seedLoop:
+	for len(seedRanges) > 0 {
+		start, length := seedRanges[0], seedRanges[1]
+		end := start + length - 1
+		seedRanges = seedRanges[2:]
 
-	lowestLocNum := <-locsCh
-	for i := 0; i < len(seedRanges)/2-1; i++ {
-		locNum := <-locsCh
-		if locNum < lowestLocNum {
-			lowestLocNum = locNum
+		startCat := startCats[0]
+		startCats = startCats[1:]
+
+		for i := startCat; i < len(allMaps); i++ {
+			catMaps := allMaps[i]
+			for _, catMap := range catMaps {
+				if start >= catMap.srcStart && end <= catMap.srcEnd {
+					// The seed range is entirely within the category map's range.
+					start = start - catMap.srcStart + catMap.destStart
+					end = end - catMap.srcStart + catMap.destStart
+					break // go to the next category
+				} else if start < catMap.srcStart && end >= catMap.srcStart && end <= catMap.srcEnd {
+					// The seed range is partially within the category map's range,
+					// extending further to the left (and maybe also the right).
+					// Split the seed range into two smaller ranges, one of which is
+					// entirely within the category map's range.
+					newSeed1Start := start
+					newSeed1Length := catMap.srcStart - start
+					newSeed2Start := catMap.srcStart
+					newSeed2Length := end - catMap.srcStart + 1
+					seedRanges = append(
+						seedRanges,
+						newSeed1Start,
+						newSeed1Length,
+						newSeed2Start,
+						newSeed2Length,
+					)
+					startCats = append(startCats, i, i)
+					continue seedLoop
+				} else if start >= catMap.srcStart && start <= catMap.srcEnd && end > catMap.srcEnd {
+					// The seed range is partially within the category map's range,
+					// extending further to the right.
+					// Split the seed range into two smaller ranges, one of which is
+					// entirely within the category map's range.
+					newSeed1Start := start
+					newSeed1Length := catMap.srcEnd - start + 1
+					newSeed2Start := catMap.srcEnd + 1
+					newSeed2Length := end - catMap.srcEnd
+					seedRanges = append(
+						seedRanges,
+						newSeed1Start,
+						newSeed1Length,
+						newSeed2Start,
+						newSeed2Length,
+					)
+					startCats = append(startCats, i, i)
+					continue seedLoop
+				}
+			}
+		}
+
+		if lowestLocNum == -1 || start < lowestLocNum {
+			lowestLocNum = start
 		}
 	}
 
-	t := time.Now()
-	elapsed := t.Sub(start)
-	fmt.Printf("part 2 result: %d (took %v)", lowestLocNum, elapsed)
-}
-
-func getLowestLocNum(seedRangeStart, rangeLength int, allMaps [][]Map, locsCh chan int) {
-	lowestLocNum := getLoc(seedRangeStart, allMaps)
-	for seed := seedRangeStart; seed < seedRangeStart+rangeLength; seed++ {
-		locNum := getLoc(seed, allMaps)
-		if locNum < lowestLocNum {
-			lowestLocNum = locNum
-		}
-	}
-	locsCh <- lowestLocNum
+	fmt.Println("part 2 result:", lowestLocNum)
 }
