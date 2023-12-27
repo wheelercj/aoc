@@ -10,6 +10,12 @@ type Turn struct {
 	left, right string
 }
 
+type EndNode struct {
+	name      string
+	stepCount int // the number of steps at which the end node was first found
+	period    int // the number of steps between each encounter of the end node
+}
+
 func main() {
 	fileName := "input.txt"
 	fmt.Println("file name:", fileName)
@@ -36,15 +42,6 @@ func parseInput(fileName string) (string, map[string]Turn) {
 	}
 
 	return turns, network
-}
-
-func allEndNodes(nodes []string) bool {
-	for _, node := range nodes {
-		if !strings.HasSuffix(node, "Z") {
-			return false
-		}
-	}
-	return true
 }
 
 func part1(turns string, network map[string]Turn) {
@@ -82,16 +79,35 @@ func part2(turns string, network map[string]Turn) {
 		}
 	}
 
+	endNodes := make([]EndNode, len(currentNodes))
+
 	stepCount := 0
+	periodCount := 0
 	turnIndex := 0
-	for !allEndNodes(currentNodes) {
+	for periodCount < 6 {
 		if string(turns[turnIndex]) == "L" {
 			for i, node := range currentNodes {
 				currentNodes[i] = network[node].left
+				if strings.HasSuffix(currentNodes[i], "Z") {
+					if len(endNodes[i].name) == 0 {
+						endNodes[i] = EndNode{name: currentNodes[i], stepCount: stepCount}
+					} else if endNodes[i].period == 0 {
+						endNodes[i].period = stepCount - endNodes[i].stepCount
+						periodCount++
+					}
+				}
 			}
 		} else {
 			for i, node := range currentNodes {
 				currentNodes[i] = network[node].right
+				if strings.HasSuffix(currentNodes[i], "Z") {
+					if len(endNodes[i].name) == 0 {
+						endNodes[i] = EndNode{name: currentNodes[i], stepCount: stepCount}
+					} else if endNodes[i].period == 0 {
+						endNodes[i].period = stepCount - endNodes[i].stepCount
+						periodCount++
+					}
+				}
 			}
 		}
 
@@ -101,5 +117,32 @@ func part2(turns string, network map[string]Turn) {
 	}
 	fmt.Print("\r                                                 \r")
 
-	fmt.Println("\tresult:", stepCount) // > 22199
+	periods := make([]int, len(currentNodes))
+	for i, endNode := range endNodes {
+		periods[i] = endNode.period
+	}
+
+	fmt.Println("\tresult:", lcm(periods...))
+}
+
+// lcm finds the least common multiple of two or more integers.
+func lcm(integers ...int) int {
+	if len(integers) < 2 {
+		panic("The lcm function requires 2 or more integers.")
+	}
+	result := integers[0] * integers[1] / gcd(integers[0], integers[1])
+	for i := 2; i < len(integers); i++ {
+		result = lcm(result, integers[i])
+	}
+	return result
+}
+
+// gcd finds the greatest common denominator of two integers.
+func gcd(a, b int) int {
+	for b != 0 {
+		temp := b
+		b = a % b
+		a = temp
+	}
+	return a
 }
