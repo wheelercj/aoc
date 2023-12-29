@@ -10,6 +10,7 @@ import (
 func main() {
 	sequences := parseInput("input.txt")
 	part1(sequences)
+	part2(sequences)
 }
 
 func parseInput(fileName string) [][]int {
@@ -55,6 +56,24 @@ func getNextDiffValue(s []int) int {
 	}
 }
 
+// getPrevDiffValue finds the previous value in the sequence that is the sequences of
+// differences of s.
+func getPrevDiffValue(s []int) int {
+	diffs := make([]int, len(s)-1)
+	allZeroes := true
+	for j := len(s) - 1; j > 0; j-- {
+		diffs[j-1] = s[j] - s[j-1]
+		if diffs[j-1] != 0 {
+			allZeroes = false
+		}
+	}
+	if allZeroes {
+		return 0
+	} else {
+		return diffs[0] - getPrevDiffValue(diffs)
+	}
+}
+
 func part1(sequences [][]int) {
 	var sum int
 	for _, s := range sequences {
@@ -62,4 +81,13 @@ func part1(sequences [][]int) {
 	}
 
 	fmt.Println("part 1 result:", sum)
+}
+
+func part2(sequences [][]int) {
+	var sum int
+	for _, s := range sequences {
+		sum += s[0] - getPrevDiffValue(s)
+	}
+
+	fmt.Println("part 2 result:", sum)
 }
