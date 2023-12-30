@@ -41,11 +41,36 @@ func findS(grid [][]string) Coord {
 	panic("unreachable")
 }
 
+// getSPipe determines what kind of pipe the S symbol is covering up in grid.
+func getSPipe(sCoords Coord, grid [][]string) string {
+	var (
+		up    = loopGoesUp(sCoords, nil, grid)
+		right = loopGoesRight(sCoords, nil, grid)
+		down  = loopGoesDown(sCoords, nil, grid)
+		left  = loopGoesLeft(sCoords, nil, grid)
+	)
+	switch {
+	case up && right:
+		return "L"
+	case up && down:
+		return "|"
+	case up && left:
+		return "J"
+	case right && down:
+		return "F"
+	case right && left:
+		return "-"
+	case down && left:
+		return "7"
+	}
+	panic("unreachable")
+}
+
 func findLoop(sCoords Coord, grid [][]string) []Coord {
 	loop := []Coord{sCoords}
 	nextLoopPipeCoords := findNextLoopPipe(sCoords, nil, grid)
 	prevLoopPipe := sCoords
-	for nextLoopPipeCoords.x != sCoords.x || nextLoopPipeCoords.y != sCoords.y {
+	for nextLoopPipeCoords != sCoords {
 		loop = append(loop, nextLoopPipeCoords)
 		tempLoopPipe := nextLoopPipeCoords
 		nextLoopPipeCoords = findNextLoopPipe(nextLoopPipeCoords, &prevLoopPipe, grid)
@@ -152,9 +177,9 @@ func loopGoesLeft(currentCoords Coord, prevCoords *Coord, grid [][]string) bool 
 
 // findContainedArea finds the number of tiles loop contains in grid. It does this by
 // iterating through each line of the grid and counting the number of times a
-// perpendicular pipe within loop is crossed. Crossing corner pipes in loop counts if
-// they double back on the previous corner pipe in loop or if there is no previous
-// corner pipe. Tiles with an odd loop crossing count are within the contained area.
+// perpendicular pipe within loop is crossed. Tiles with an odd loop crossing count are
+// within the contained area. Crossing corner pipes in loop counts if they double back
+// on the previous corner pipe in loop or if there is no previous corner pipe.
 func findContainedArea(loop []Coord, grid [][]string, sCoords Coord) int {
 	var area int
 	cornerPipes := []string{"L", "J", "7", "F"}
@@ -195,36 +220,6 @@ func findContainedArea(loop []Coord, grid [][]string, sCoords Coord) int {
 		}
 	}
 	return area
-}
-
-// getSPipe determines what kind of pipe the S symbol is covering up in grid.
-func getSPipe(sCoords Coord, grid [][]string) string {
-	var up, right, down, left bool
-	if loopGoesUp(sCoords, nil, grid) {
-		up = true
-	}
-	if loopGoesRight(sCoords, nil, grid) {
-		right = true
-	}
-	if loopGoesDown(sCoords, nil, grid) {
-		down = true
-	}
-	if loopGoesLeft(sCoords, nil, grid) {
-		left = true
-	}
-	if up && right {
-		return "L"
-	} else if up && down {
-		return "|"
-	} else if up && left {
-		return "J"
-	} else if right && down {
-		return "F"
-	} else if right && left {
-		return "-"
-	} else {
-		return "7"
-	}
 }
 
 func part1(grid [][]string) {
