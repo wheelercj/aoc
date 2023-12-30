@@ -14,6 +14,7 @@ type Coord struct {
 func main() {
 	grid := parseInput("input.txt")
 	part1(grid)
+	part2(grid)
 }
 
 func parseInput(fileName string) [][]string {
@@ -30,10 +31,10 @@ func parseInput(fileName string) [][]string {
 }
 
 func findS(grid [][]string) Coord {
-	for i, line := range grid {
-		for j, ch := range line {
+	for y, line := range grid {
+		for x, ch := range line {
 			if ch == "S" {
-				return Coord{x: i, y: j}
+				return Coord{x: x, y: y}
 			}
 		}
 	}
@@ -42,111 +43,199 @@ func findS(grid [][]string) Coord {
 
 func findLoop(sCoords Coord, grid [][]string) []Coord {
 	loop := []Coord{sCoords}
-	nextPipe := findNextPipe(sCoords, nil, grid)
-	prevPipe := sCoords
-	for nextPipe.x != sCoords.x || nextPipe.y != sCoords.y {
-		loop = append(loop, nextPipe)
-		tempPipe := nextPipe
-		nextPipe = findNextPipe(nextPipe, &prevPipe, grid)
-		prevPipe = tempPipe
+	nextLoopPipeCoords := findNextLoopPipe(sCoords, nil, grid)
+	prevLoopPipe := sCoords
+	for nextLoopPipeCoords.x != sCoords.x || nextLoopPipeCoords.y != sCoords.y {
+		loop = append(loop, nextLoopPipeCoords)
+		tempLoopPipe := nextLoopPipeCoords
+		nextLoopPipeCoords = findNextLoopPipe(nextLoopPipeCoords, &prevLoopPipe, grid)
+		prevLoopPipe = tempLoopPipe
 	}
 	return loop
 }
 
-func findNextPipe(currentCoords Coord, prevCoords *Coord, grid [][]string) Coord {
+func findNextLoopPipe(currentCoords Coord, prevCoords *Coord, grid [][]string) Coord {
 	currentPipe := grid[currentCoords.y][currentCoords.x]
+	if currentPipe == "S" {
+		currentPipe = getSPipe(currentCoords, grid)
+	}
 	switch currentPipe {
 	case "|":
-		if nextPipe := lookUp(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesUp(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
 		}
-		return *lookDown(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
 	case "-":
-		if nextPipe := lookLeft(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesLeft(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x - 1, y: currentCoords.y}
 		}
-		return *lookRight(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x + 1, y: currentCoords.y}
 	case "L":
-		if nextPipe := lookUp(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesUp(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
 		}
-		return *lookRight(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x + 1, y: currentCoords.y}
 	case "J":
-		if nextPipe := lookUp(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesUp(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
 		}
-		return *lookLeft(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x - 1, y: currentCoords.y}
 	case "7":
-		if nextPipe := lookLeft(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesLeft(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x - 1, y: currentCoords.y}
 		}
-		return *lookDown(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
 	case "F":
-		if nextPipe := lookRight(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
+		if loopGoesRight(currentCoords, prevCoords, grid) {
+			return Coord{x: currentCoords.x + 1, y: currentCoords.y}
 		}
-		return *lookDown(currentCoords, prevCoords, grid)
-	case "S":
-		if nextPipe := lookUp(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
-		}
-		if nextPipe := lookRight(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
-		}
-		if nextPipe := lookDown(currentCoords, prevCoords, grid); nextPipe != nil {
-			return *nextPipe
-		}
-		return *lookLeft(currentCoords, prevCoords, grid)
+		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
 	}
 	panic("unreachable")
 }
 
-func lookUp(currentCoords Coord, prevCoords *Coord, grid [][]string) *Coord {
-	if currentCoords.y-1 >= 0 {
-		if prevCoords == nil || prevCoords.y != currentCoords.y-1 || prevCoords.x != currentCoords.x {
-			if slices.Contains([]string{"|", "7", "F", "S"}, grid[currentCoords.y-1][currentCoords.x]) {
-				return &Coord{x: currentCoords.x, y: currentCoords.y - 1}
+func loopGoesUp(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+	upCoords := currentCoords
+	upCoords.y--
+	if upCoords.y >= 0 {
+		if prevCoords == nil || *prevCoords != upCoords {
+			upPipe := grid[upCoords.y][upCoords.x]
+			if slices.Contains([]string{"|", "7", "F", "S"}, upPipe) {
+				return true
 			}
 		}
 	}
-	return nil
+	return false
 }
 
-func lookRight(currentCoords Coord, prevCoords *Coord, grid [][]string) *Coord {
-	if currentCoords.x+1 < len(grid[currentCoords.y]) {
-		if prevCoords == nil || prevCoords.y != currentCoords.y || prevCoords.x != currentCoords.x+1 {
-			if slices.Contains([]string{"-", "J", "7", "S"}, grid[currentCoords.y][currentCoords.x+1]) {
-				return &Coord{x: currentCoords.x + 1, y: currentCoords.y}
+func loopGoesRight(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+	rightCoords := currentCoords
+	rightCoords.x++
+	if rightCoords.x < len(grid[0]) {
+		if prevCoords == nil || *prevCoords != rightCoords {
+			rightPipe := grid[rightCoords.y][rightCoords.x]
+			if slices.Contains([]string{"-", "J", "7", "S"}, rightPipe) {
+				return true
 			}
 		}
 	}
-	return nil
+	return false
 }
 
-func lookDown(currentCoords Coord, prevCoords *Coord, grid [][]string) *Coord {
-	if currentCoords.y+1 < len(grid) {
-		if prevCoords == nil || prevCoords.y != currentCoords.y+1 || prevCoords.x != currentCoords.x {
-			if slices.Contains([]string{"|", "L", "J", "S"}, grid[currentCoords.y+1][currentCoords.x]) {
-				return &Coord{x: currentCoords.x, y: currentCoords.y + 1}
+func loopGoesDown(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+	downCoords := currentCoords
+	downCoords.y++
+	if downCoords.y < len(grid) {
+		if prevCoords == nil || *prevCoords != downCoords {
+			downPipe := grid[downCoords.y][downCoords.x]
+			if slices.Contains([]string{"|", "L", "J", "S"}, downPipe) {
+				return true
 			}
 		}
 	}
-	return nil
+	return false
 }
 
-func lookLeft(currentCoords Coord, prevCoords *Coord, grid [][]string) *Coord {
-	if currentCoords.x-1 >= 0 {
-		if prevCoords == nil || prevCoords.y != currentCoords.y || prevCoords.x != currentCoords.x-1 {
-			if slices.Contains([]string{"-", "L", "F", "S"}, grid[currentCoords.y][currentCoords.x-1]) {
-				return &Coord{x: currentCoords.x - 1, y: currentCoords.y}
+func loopGoesLeft(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+	leftCoords := currentCoords
+	leftCoords.x--
+	if leftCoords.x >= 0 {
+		if prevCoords == nil || *prevCoords != leftCoords {
+			leftPipe := grid[leftCoords.y][leftCoords.x]
+			if slices.Contains([]string{"-", "L", "F", "S"}, leftPipe) {
+				return true
 			}
 		}
 	}
-	return nil
+	return false
+}
+
+// findContainedArea finds the number of tiles loop contains in grid. It does this by
+// iterating through each line of the grid and counting the number of times a
+// perpendicular pipe within loop is crossed. Crossing corner pipes in loop counts if
+// they double back on the previous corner pipe in loop or if there is no previous
+// corner pipe. Tiles with an odd loop crossing count are within the contained area.
+func findContainedArea(loop []Coord, grid [][]string, sCoords Coord) int {
+	var area int
+	cornerPipes := []string{"L", "J", "7", "F"}
+	for y, line := range grid {
+		var loopCrossCount int
+		var prevCorner string
+		for x, ch := range line {
+			if ch == "S" {
+				ch = getSPipe(sCoords, grid)
+			}
+			partOfLoop := slices.Contains(loop, Coord{x: x, y: y})
+			if !partOfLoop {
+				insideLoop := loopCrossCount%2 == 1
+				if insideLoop {
+					area++
+				}
+			} else if ch != "-" {
+				if ch == "|" {
+					loopCrossCount++
+				} else if slices.Contains(cornerPipes, ch) {
+					switch prevCorner {
+					case "":
+						loopCrossCount++
+						prevCorner = ch
+					case "L":
+						if ch == "J" {
+							loopCrossCount++
+						}
+						prevCorner = ""
+					case "F":
+						if ch == "7" {
+							loopCrossCount++
+						}
+						prevCorner = ""
+					}
+				}
+			}
+		}
+	}
+	return area
+}
+
+// getSPipe determines what kind of pipe the S symbol is covering up in grid.
+func getSPipe(sCoords Coord, grid [][]string) string {
+	var up, right, down, left bool
+	if loopGoesUp(sCoords, nil, grid) {
+		up = true
+	}
+	if loopGoesRight(sCoords, nil, grid) {
+		right = true
+	}
+	if loopGoesDown(sCoords, nil, grid) {
+		down = true
+	}
+	if loopGoesLeft(sCoords, nil, grid) {
+		left = true
+	}
+	if up && right {
+		return "L"
+	} else if up && down {
+		return "|"
+	} else if up && left {
+		return "J"
+	} else if right && down {
+		return "F"
+	} else if right && left {
+		return "-"
+	} else {
+		return "7"
+	}
 }
 
 func part1(grid [][]string) {
 	sCoords := findS(grid)
 	loop := findLoop(sCoords, grid)
 	fmt.Println("part 1 result:", len(loop)/2)
+}
+
+func part2(grid [][]string) {
+	sCoords := findS(grid)
+	loop := findLoop(sCoords, grid)
+	area := findContainedArea(loop, grid, sCoords)
+	fmt.Println("part 2 result:", area)
 }
