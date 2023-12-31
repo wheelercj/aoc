@@ -11,6 +11,16 @@ type Coord struct {
 	x, y int
 }
 
+type Direction int
+
+const (
+	noDirection Direction = iota
+	up
+	right
+	down
+	left
+)
+
 func main() {
 	grid := parseInput("input.txt")
 	part1(grid)
@@ -44,10 +54,10 @@ func findS(grid [][]string) Coord {
 // getSPipe determines what kind of pipe the S symbol is covering up in grid.
 func getSPipe(sCoords Coord, grid [][]string) string {
 	var (
-		up    = loopGoesUp(sCoords, nil, grid)
-		right = loopGoesRight(sCoords, nil, grid)
-		down  = loopGoesDown(sCoords, nil, grid)
-		left  = loopGoesLeft(sCoords, nil, grid)
+		up    = loopGoesUp(sCoords, grid)
+		right = loopGoesRight(sCoords, grid)
+		down  = loopGoesDown(sCoords, grid)
+		left  = loopGoesLeft(sCoords, grid)
 	)
 	switch {
 	case up && right:
@@ -68,108 +78,114 @@ func getSPipe(sCoords Coord, grid [][]string) string {
 
 func findLoop(sCoords Coord, grid [][]string) []Coord {
 	loop := []Coord{sCoords}
-	nextLoopPipeCoords := findNextLoopPipe(sCoords, nil, grid)
-	prevLoopPipe := sCoords
-	for nextLoopPipeCoords != sCoords {
-		loop = append(loop, nextLoopPipeCoords)
-		tempLoopPipe := nextLoopPipeCoords
-		nextLoopPipeCoords = findNextLoopPipe(nextLoopPipeCoords, &prevLoopPipe, grid)
-		prevLoopPipe = tempLoopPipe
+	coords := sCoords
+	dir := noDirection
+	for {
+		dir = findNextLoopDir(coords, dir, grid)
+		switch dir {
+		case up:
+			coords.y--
+		case right:
+			coords.x++
+		case down:
+			coords.y++
+		case left:
+			coords.x--
+		}
+		if coords == sCoords {
+			break
+		}
+		loop = append(loop, coords)
 	}
 	return loop
 }
 
-func findNextLoopPipe(currentCoords Coord, prevCoords *Coord, grid [][]string) Coord {
-	currentPipe := grid[currentCoords.y][currentCoords.x]
-	if currentPipe == "S" {
-		currentPipe = getSPipe(currentCoords, grid)
+// findNextLoopDir finds the direction of the next part of the loop. prevCoords is the
+// coordinates of the most recently found part of the loop. prevDir is the direction in
+// which prevCoords was found.
+func findNextLoopDir(prevCoords Coord, prevDir Direction, grid [][]string) Direction {
+	prevPipe := grid[prevCoords.y][prevCoords.x]
+	if prevPipe == "S" {
+		prevPipe = getSPipe(prevCoords, grid)
 	}
-	switch currentPipe {
+	switch prevPipe {
 	case "|":
-		if loopGoesUp(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
+		if prevDir == up {
+			return up
 		}
-		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
+		return down
 	case "-":
-		if loopGoesLeft(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x - 1, y: currentCoords.y}
+		if prevDir == left {
+			return left
 		}
-		return Coord{x: currentCoords.x + 1, y: currentCoords.y}
+		return right
 	case "L":
-		if loopGoesUp(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
+		if prevDir == down {
+			return right
 		}
-		return Coord{x: currentCoords.x + 1, y: currentCoords.y}
+		return up
 	case "J":
-		if loopGoesUp(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x, y: currentCoords.y - 1}
+		if prevDir == right {
+			return up
 		}
-		return Coord{x: currentCoords.x - 1, y: currentCoords.y}
+		return left
 	case "7":
-		if loopGoesLeft(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x - 1, y: currentCoords.y}
+		if prevDir == up {
+			return left
 		}
-		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
+		return down
 	case "F":
-		if loopGoesRight(currentCoords, prevCoords, grid) {
-			return Coord{x: currentCoords.x + 1, y: currentCoords.y}
+		if prevDir == up {
+			return right
 		}
-		return Coord{x: currentCoords.x, y: currentCoords.y + 1}
+		return down
 	}
 	panic("unreachable")
 }
 
-func loopGoesUp(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+func loopGoesUp(currentCoords Coord, grid [][]string) bool {
 	upCoords := currentCoords
 	upCoords.y--
 	if upCoords.y >= 0 {
-		if prevCoords == nil || *prevCoords != upCoords {
-			upPipe := grid[upCoords.y][upCoords.x]
-			if slices.Contains([]string{"|", "7", "F", "S"}, upPipe) {
-				return true
-			}
+		upPipe := grid[upCoords.y][upCoords.x]
+		if slices.Contains([]string{"|", "7", "F", "S"}, upPipe) {
+			return true
 		}
 	}
 	return false
 }
 
-func loopGoesRight(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+func loopGoesRight(currentCoords Coord, grid [][]string) bool {
 	rightCoords := currentCoords
 	rightCoords.x++
 	if rightCoords.x < len(grid[0]) {
-		if prevCoords == nil || *prevCoords != rightCoords {
-			rightPipe := grid[rightCoords.y][rightCoords.x]
-			if slices.Contains([]string{"-", "J", "7", "S"}, rightPipe) {
-				return true
-			}
+		rightPipe := grid[rightCoords.y][rightCoords.x]
+		if slices.Contains([]string{"-", "J", "7", "S"}, rightPipe) {
+			return true
 		}
 	}
 	return false
 }
 
-func loopGoesDown(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+func loopGoesDown(currentCoords Coord, grid [][]string) bool {
 	downCoords := currentCoords
 	downCoords.y++
 	if downCoords.y < len(grid) {
-		if prevCoords == nil || *prevCoords != downCoords {
-			downPipe := grid[downCoords.y][downCoords.x]
-			if slices.Contains([]string{"|", "L", "J", "S"}, downPipe) {
-				return true
-			}
+		downPipe := grid[downCoords.y][downCoords.x]
+		if slices.Contains([]string{"|", "L", "J", "S"}, downPipe) {
+			return true
 		}
 	}
 	return false
 }
 
-func loopGoesLeft(currentCoords Coord, prevCoords *Coord, grid [][]string) bool {
+func loopGoesLeft(currentCoords Coord, grid [][]string) bool {
 	leftCoords := currentCoords
 	leftCoords.x--
 	if leftCoords.x >= 0 {
-		if prevCoords == nil || *prevCoords != leftCoords {
-			leftPipe := grid[leftCoords.y][leftCoords.x]
-			if slices.Contains([]string{"-", "L", "F", "S"}, leftPipe) {
-				return true
-			}
+		leftPipe := grid[leftCoords.y][leftCoords.x]
+		if slices.Contains([]string{"-", "L", "F", "S"}, leftPipe) {
+			return true
 		}
 	}
 	return false
