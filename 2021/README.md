@@ -1,0 +1,1 @@
+This folder holds solutions for Advent of Code 2021. I wrote them in 2021 and originally didn't plan on ever committing them. I still should have kept the puzzle inputs in separate files and done all the parsing with code instead of sometimes with keyboard shortcuts, but at least I'm doing that now with the later AoCs.
