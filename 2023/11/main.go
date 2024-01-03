@@ -18,6 +18,7 @@ func main() {
 	emptyCols := findEmptyCols(universe)
 	galaxies := findGalaxies(universe)
 	part1(universe, galaxies, emptyRows, emptyCols)
+	part2(universe, galaxies, emptyRows, emptyCols)
 }
 
 func parseInput(fileName string) [][]string {
@@ -105,8 +106,9 @@ func findDistance(
 	return dist
 }
 
-func part1(universe [][]string, galaxies []Coord, emptyRows, emptyCols []int) {
-	emptyWidth := 2
+func findSumOfDistances(
+	universe [][]string, galaxies []Coord, emptyRows, emptyCols []int, emptyWidth int,
+) int {
 	var sum int
 	for i := 0; i < len(galaxies)-1; i++ {
 		for j := i + 1; j < len(galaxies); j++ {
@@ -115,9 +117,17 @@ func part1(universe [][]string, galaxies []Coord, emptyRows, emptyCols []int) {
 			)
 		}
 	}
+	return sum
+}
+
+func part1(universe [][]string, galaxies []Coord, emptyRows, emptyCols []int) {
+	emptyWidth := 2
+	sum := findSumOfDistances(universe, galaxies, emptyRows, emptyCols, emptyWidth)
 	fmt.Println("part 1 result:", sum)
 }
 
-func part2() {
-	fmt.Println("part 2 result:")
+func part2(universe [][]string, galaxies []Coord, emptyRows, emptyCols []int) {
+	emptyWidth := 1000000
+	sum := findSumOfDistances(universe, galaxies, emptyRows, emptyCols, emptyWidth)
+	fmt.Println("part 2 result:", sum)
 }
