@@ -13,97 +13,55 @@ type Coord struct {
 }
 
 func main() {
-	lines := parseInput("input.txt")
-	extraEmptyRows := findExtraEmptyRows(lines)
-	extraEmptyCols := findExtraEmptyCols(lines)
-	universe := expandUniverse(lines, extraEmptyRows, extraEmptyCols)
+	universe := parseInput("input.txt")
+	emptyRows := findEmptyRows(universe)
+	emptyCols := findEmptyCols(universe)
 	galaxies := findGalaxies(universe)
-	part1(universe, galaxies)
+	part1(universe, galaxies, emptyRows, emptyCols)
 }
 
-func parseInput(fileName string) []string {
+func parseInput(fileName string) [][]string {
 	bytes, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}
 	lines := strings.Split(strings.Trim(string(bytes), "\r\n"), "\r\n")
-	return lines
+	universe := make([][]string, len(lines))
+	for i := range universe {
+		universe[i] = strings.Split(lines[i], "")
+	}
+	return universe
 }
 
-// findExtraEmptyRows finds the indexes of the rows in lines that do not contain any #
-// characters, and returns the indexes to where the added empty rows will be when the
-// universe is expanded.
-func findExtraEmptyRows(lines []string) []int {
-	var extraEmptyRows []int
-	var foundCount int
-	for i, line := range lines {
-		if !strings.Contains(line, "#") {
-			extraEmptyRows = append(extraEmptyRows, i+foundCount+1)
-			foundCount++
+// findEmptyRows finds the indexes of the rows in universe that do not contain any
+// # characters.
+func findEmptyRows(universe [][]string) []int {
+	var emptyRows []int
+	for y, row := range universe {
+		if !slices.Contains(row, "#") {
+			emptyRows = append(emptyRows, y)
 		}
 	}
-	return extraEmptyRows
+	return emptyRows
 }
 
-// findExtraEmptyCols finds the indexes of the columns in lines that do not contain any
-// # characters, and returns the indexes to where the added empty columns will be when
-// the universe is expanded.
-func findExtraEmptyCols(lines []string) []int {
-	var extraEmptyCols []int
-	var foundCount int
-	for x := 0; x < len(lines[0]); x++ {
+// findEmptyCols finds the indexes of the columns in universe that do not contain
+// any # characters.
+func findEmptyCols(universe [][]string) []int {
+	var emptyCols []int
+	for x := 0; x < len(universe[0]); x++ {
 		var foundHashtag bool
-		for _, line := range lines {
-			if string(line[x]) == "#" {
+		for _, row := range universe {
+			if row[x] == "#" {
 				foundHashtag = true
 				break
 			}
 		}
 		if !foundHashtag {
-			extraEmptyCols = append(extraEmptyCols, x+foundCount+1)
-			foundCount++
+			emptyCols = append(emptyCols, x)
 		}
 	}
-	return extraEmptyCols
-}
-
-// expandUniverse takes everything in lines and adds extra "empty" (period-filled) rows
-// and columns at the indexes specified by extraEmptyRows and extraEmptyCols. These
-// indexes must be sorted (ascending) and be the indexes of where the rows and columns
-// will be after the expansion, not before.
-func expandUniverse(lines []string, extraEmptyRows, extraEmptyCols []int) [][]string {
-	universeHeight := len(lines) + len(extraEmptyRows)
-	universeWidth := len(lines[0]) + len(extraEmptyCols)
-	universe := make([][]string, universeHeight)
-
-	linesY := 0
-	linesX := 0
-	for y := range universe {
-		universe[y] = make([]string, universeWidth)
-		if slices.Contains(extraEmptyRows, y) {
-			for x := range universe[y] {
-				universe[y][x] = "."
-			}
-			continue
-		}
-
-		for x := range universe[y] {
-			if slices.Contains(extraEmptyCols, x) {
-				universe[y][x] = "."
-				continue
-			}
-			if string(lines[linesY][linesX]) == "#" {
-				universe[y][x] = "#"
-			} else {
-				universe[y][x] = "."
-			}
-			linesX++
-		}
-		linesY++
-		linesX = 0
-	}
-
-	return universe
+	return emptyCols
 }
 
 func findGalaxies(universe [][]string) []Coord {
@@ -118,18 +76,43 @@ func findGalaxies(universe [][]string) []Coord {
 	return galaxies
 }
 
-// findDistance finds the character distance between two galaxies in universe.
-func findDistance(universe [][]string, galaxy1, galaxy2 Coord) int {
-	a := int(math.Abs(float64(galaxy2.x - galaxy1.x)))
-	b := int(math.Abs(float64(galaxy2.y - galaxy1.y)))
-	return a + b
+// findDistance finds the character distance between two galaxies in universe. Each
+// empty row and empty column between the galaxies add emptyWidth distance to the total.
+func findDistance(
+	universe [][]string, galaxy1, galaxy2 Coord, emptyRows, emptyCols []int, emptyWidth int,
+) int {
+	dist := int(math.Abs(float64(galaxy2.x - galaxy1.x)))
+	dist += int(math.Abs(float64(galaxy2.y - galaxy1.y)))
+
+	for _, emptyRow := range emptyRows {
+		isBetween := galaxy1.y < emptyRow && emptyRow < galaxy2.y ||
+			galaxy2.y < emptyRow && emptyRow < galaxy1.y
+		if isBetween {
+			dist += emptyWidth - 1
+			// 1 is subtracted here because the original empty space was already added
+			// above.
+		}
+	}
+
+	for _, emptyCol := range emptyCols {
+		isBetween := galaxy1.x < emptyCol && emptyCol < galaxy2.x ||
+			galaxy2.x < emptyCol && emptyCol < galaxy1.x
+		if isBetween {
+			dist += emptyWidth - 1
+		}
+	}
+
+	return dist
 }
 
-func part1(universe [][]string, galaxies []Coord) {
+func part1(universe [][]string, galaxies []Coord, emptyRows, emptyCols []int) {
+	emptyWidth := 2
 	var sum int
 	for i := 0; i < len(galaxies)-1; i++ {
 		for j := i + 1; j < len(galaxies); j++ {
-			sum += findDistance(universe, galaxies[i], galaxies[j])
+			sum += findDistance(
+				universe, galaxies[i], galaxies[j], emptyRows, emptyCols, emptyWidth,
+			)
 		}
 	}
 	fmt.Println("part 1 result:", sum)
