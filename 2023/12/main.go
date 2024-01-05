@@ -21,6 +21,10 @@ type Row struct {
 	damageSizes []int
 }
 
+type Group struct {
+	start, end, size int
+}
+
 func main() {
 	rows := parseInput("input.txt")
 	part1(rows)
@@ -56,13 +60,9 @@ func mustParseInt(numStr string) int {
 	return int(num)
 }
 
-type Group struct {
-	start, end, size, arrangementCount int
-}
-
 // initGroups sets each damaged spring group's start and end indexes to that group's
 // first possible position without overlapping any other group.
-func initGroups(groups []Group, row Row) []Group {
+func initGroups(groups []Group, row Row) {
 	// First, set each group's size.
 	for i := 0; i < len(groups); i++ {
 		groups[i].size = row.damageSizes[i]
@@ -97,18 +97,16 @@ func initGroups(groups []Group, row Row) []Group {
 			}
 		}
 	}
-
-	return groups
 }
 
 func getArrangementCount(row Row) int {
 	groups := make([]Group, len(row.damageSizes)) // groups of damaged springs
-	groups = initGroups(groups, row)
-	n, _ := _getArrangementCount(0, row, groups)
+	initGroups(groups, row)
+	n := _getArrangementCount(0, row, groups)
 	return n
 }
 
-func _getArrangementCount(groupIndex int, row Row, groups []Group) (int, []Group) {
+func _getArrangementCount(groupIndex int, row Row, groups []Group) int {
 	var arrangementCount int
 	var n int
 
@@ -118,14 +116,14 @@ func _getArrangementCount(groupIndex int, row Row, groups []Group) (int, []Group
 		groups[groupIndex].end = groups[groupIndex].start + groups[groupIndex].size - 1
 		if groups[groupIndex].end > -2+groups[groupIndex+1].start {
 			// The groupIndex group has run out of space.
-			return arrangementCount, groups
+			return arrangementCount
 		}
 		for !groupCanBeHere(groupIndex, row, groups) {
 			groups[groupIndex].start++
 			groups[groupIndex].end++
 			if groups[groupIndex].end > -2+groups[groupIndex+1].start {
 				// The groupIndex group has run out of space.
-				return arrangementCount, groups
+				return arrangementCount
 			}
 		}
 	}
@@ -133,17 +131,17 @@ func _getArrangementCount(groupIndex int, row Row, groups []Group) (int, []Group
 	for {
 		// If the next group is not the last group.
 		if groupIndex+1 < len(groups)-1 {
-			n, groups = _getArrangementCount(groupIndex+1, row, groups)
+			n = _getArrangementCount(groupIndex+1, row, groups)
 			arrangementCount += n
 		} else {
 			// Move the last group as far right as it can go.
-			n, groups = baseGetArrangementCount(row, groups)
+			n = baseGetArrangementCount(row, groups)
 			arrangementCount += n
 		}
 
 		// If the groupIndex group is already as far right as it can go, return.
 		if groups[groupIndex].end == -2+groups[groupIndex+1].start {
-			return arrangementCount, groups
+			return arrangementCount
 		}
 
 		// Move the groupIndex group one space to the right.
@@ -151,20 +149,20 @@ func _getArrangementCount(groupIndex int, row Row, groups []Group) (int, []Group
 		groups[groupIndex].end++
 		if groups[groupIndex].end > -2+groups[groupIndex+1].start {
 			// The groupIndex group has run out of space.
-			return arrangementCount, groups
+			return arrangementCount
 		}
 		for !groupCanBeHere(groupIndex, row, groups) {
 			groups[groupIndex].start++
 			groups[groupIndex].end++
 			if groups[groupIndex].end > -2+groups[groupIndex+1].start {
 				// The groupIndex group has run out of space.
-				return arrangementCount, groups
+				return arrangementCount
 			}
 		}
 	}
 }
 
-func baseGetArrangementCount(row Row, groups []Group) (int, []Group) {
+func baseGetArrangementCount(row Row, groups []Group) int {
 	// Move the last group as far left as it can go.
 	z := len(groups) - 1
 	groups[z].start = groups[z-1].end + 2
@@ -184,7 +182,7 @@ func baseGetArrangementCount(row Row, groups []Group) (int, []Group) {
 	}
 
 	// When the last group is as far right as it can go, return the count.
-	return validArragements, groups
+	return validArragements
 }
 
 // groupCanBeHere determines whether the damaged spring group's current location
