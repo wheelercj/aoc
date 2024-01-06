@@ -75,8 +75,8 @@ func getArrangementCount(conditions string, damageSizes []int) int {
 		}
 	}
 
-	hash := conditions + stringify(damageSizes)
-	if v, ok := cache[hash]; ok {
+	key := conditions + stringify(damageSizes)
+	if v, ok := cache[key]; ok {
 		return v
 	}
 
@@ -94,7 +94,7 @@ func getArrangementCount(conditions string, damageSizes []int) int {
 		}
 	}
 
-	cache[hash] = result
+	cache[key] = result
 	return result
 }
 
