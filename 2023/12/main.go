@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+var cache map[string]int = make(map[string]int)
 
 type Row struct {
 	conditions  string
@@ -15,6 +18,7 @@ type Row struct {
 func main() {
 	rows := parseInput("input.txt")
 	part1(rows)
+	part2(rows)
 }
 
 func parseInput(fileName string) []Row {
@@ -47,6 +51,14 @@ func mustParseInt(numStr string) int {
 	return int(num)
 }
 
+func stringify(nums []int) string {
+	s := make([]string, len(nums))
+	for i, num := range nums {
+		s[i] = fmt.Sprint(num)
+	}
+	return strings.Join(s, ",")
+}
+
 func getArrangementCount(conditions string, damageSizes []int) int {
 	if len(conditions) == 0 {
 		if len(damageSizes) == 0 {
@@ -63,6 +75,11 @@ func getArrangementCount(conditions string, damageSizes []int) int {
 		}
 	}
 
+	hash := conditions + stringify(damageSizes)
+	if v, ok := cache[hash]; ok {
+		return v
+	}
+
 	var result int
 	if strings.Contains(".?", string(conditions[0])) {
 		result += getArrangementCount(conditions[1:], damageSizes)
@@ -77,7 +94,19 @@ func getArrangementCount(conditions string, damageSizes []int) int {
 		}
 	}
 
+	cache[hash] = result
 	return result
+}
+
+func quintuple(rows []Row) {
+	for i := range rows {
+		c := rows[i].conditions
+		d := slices.Clone(rows[i].damageSizes)
+		rows[i].conditions = c + "?" + c + "?" + c + "?" + c + "?" + c
+		for j := 0; j < 4; j++ {
+			rows[i].damageSizes = append(rows[i].damageSizes, d...)
+		}
+	}
 }
 
 func part1(rows []Row) {
@@ -88,6 +117,11 @@ func part1(rows []Row) {
 	fmt.Println("part 1 result:", sum)
 }
 
-func part2() {
-	fmt.Println("part 2 result:")
+func part2(rows []Row) {
+	quintuple(rows)
+	var sum int
+	for _, row := range rows {
+		sum += getArrangementCount(row.conditions, row.damageSizes)
+	}
+	fmt.Println("part 2 result:", sum)
 }
