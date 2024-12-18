@@ -9,14 +9,14 @@ page_groups: list[list[int]] = [
     [int(num) for num in line.split(',')] for line in pages_lines
 ]
 
-rules: dict[int, list[int]] = dict()
+rules: dict[int, set[int]] = dict()
 for rule_s in rules_lines:
     left_s, right_s = rule_s.split('|')
     left, right = int(left_s), int(right_s)
     if left in rules:
-        rules[left].append(right)
+        rules[left].add(right)
     else:
-        rules[left] = [right]
+        rules[left] = { right }
 
 sum: int = 0
 for page_group in page_groups:
