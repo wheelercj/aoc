@@ -8,11 +8,7 @@ def main():
     for y, line in enumerate(lines):
         for x, ch in enumerate(line):
             if ch == "@":
-                surrounding: list[tuple[int, int]] = get_surrounding_rolls(x, y, lines)
-                if len(surrounding) < 4:
-                    removed += 1
-                    lines[y][x] = "."
-                    q.extend(surrounding)
+                q.append((x, y))
 
     while q:
         coord: tuple[int, int] = q.pop(0)
