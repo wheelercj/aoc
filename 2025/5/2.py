@@ -30,6 +30,7 @@ def main():
 
             if is_deduped:
                 del fresh[i]
+                is_changed = True
             else:
                 i += 1
 
