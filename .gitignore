@@ -1,8 +1,8 @@
-*.txt
-*.sln
+__pycache__
+.pytest_cache
 .vs
 .vscode
+*.sln
+*.txt
 bin
 obj
-.pytest_cache
-__pycache__
